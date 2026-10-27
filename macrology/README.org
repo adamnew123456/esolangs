@@ -142,6 +142,12 @@ instruction pointer by one word.
     - ~??~ Address of TEST
     - ~><~ Address of IP (read this as /here/)
     - ~<>~ Address of IOP (read this as /in-out/)
+  - *Be very careful to always provide two hex digits!* Leaving off a hex digit
+    doesn't signal any kind of error and can very easily confuse Macrology about
+    where your instructions begin and end. ~{#5@6+~ for example is interpreted
+    as ~{#00+~; Macrology gets a ~@~ where a hex digit is expected and loads
+    zero but still consumes three bytes for the ~#~. It ignores the ~6~ as an
+    unknown instruction and executes ~+~.
 - Move instructions
   - ~l~ Treat SCA as a pointer and dereference it into SCV.
   - ~s~ Treat SCA as a pointer and store the value of SCV into it.
@@ -159,22 +165,7 @@ instruction pointer by one word.
   - ~=~, ~v~, ~^~ Performs the comparison (equal, below, above) with SCV as the left-hand side and SVA as the right-hand side, and writes the result (1 or 0) into TST.
 
 * Example Programs
-** cat
+** Hello World (Code)
 #+begin_example
-  {!@08+@20s@<>l@21s~@00=!@05+?X#21@<>m#20@><m
+  {@<>#48s#65s#6cs#6cs#6fs#2cs#20s#57s#6fs#72s#6cs#64s#21s}
 #+end_example
-
-1. ~{~ Exits verbatim mode and starts executing at ~!~
-2. ~!@08+@20s~ Calculate the address after the ~s~ instruction and store it into 0x20.
-   1. ~!@08+~ calculates the address of the ~@~ plus 8 bytes. This is the length
-      of the following ~@08+@20s~ section.
-   2. ~@20s~ stores the calculated address into memory at 0x20.
-3. ~@<>l@21s~ Read a character from IOP and save it to 0x21.
-4. ~~@00=~ Check if the value is not EOF.
-   1. ~~~ EOF is 0xffffffff, its bitwise negation is zero.
-   2. ~@00=~ checks if if the negated value is zero.
-5. ~!@05+?X~ Halt if the check in step 4 fails.
-   1. ~!@05+~ calculate the address after the following ~X~.
-   2. ~?X~ jumps to that address, skipping the ~X~, if the step 4 check succeeds.
-6. ~#21@<>m~ Moves the value copied in step 3, at 0x21, into IOP.
-7. ~#20@><m~ Moves the address saved in step 2, at 0x20, into IP. 
