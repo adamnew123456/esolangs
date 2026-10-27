@@ -164,6 +164,44 @@ instruction pointer by one word.
 - Comparisons
   - ~=~, ~v~, ~^~ Performs the comparison (equal, below, above) with SCV as the left-hand side and SVA as the right-hand side, and writes the result (1 or 0) into TST.
 
+* Debugger
+Macrology includes a very simple debugger that can be accessed over TCP or Unix
+sockets. You configure it with the ~MACL_DEBUG~ environment variable, it
+supports either ~tcp:HOST:PORT~ or ~unix:PATH~. A server must already be
+listening at that address for Macrology to connect to it:
+
+#+begin_example
+  # Terminal 1
+  $ nc -l -U dbg.sock
+
+  # Terminal 2
+  $ MACL_DEBUG=unix:dbg.sock ./macrology program.txt
+#+end_example
+
+Macrology connects to the debug socket, prints a banner message, and then waits
+for permission to execute more code. You can run the following commands on the
+debug socket:
+
+- ~k~ Kills the process being debugged. This exits the interpreter directly
+  instead of manipulating HLT like code would.
+- ~c~ Executes the program without stopping after each instruction. All executed
+  instructions and triggered traps are logged, but the connection doesn't accept
+  any more commands after this point.
+- ~s~ Single-step the next instruction. Accepts another command after the
+  instruction finishes.
+- ~r ADDR~ Reads the word at ADDR (given as hex) and prints it out. Example:
+  ~r 01~ reads the VMT.
+- ~w ADDR VALUE~ Writes the word at ADDR to VALUE. Example: ~w 01 5b~ sets the
+  VMT to the character ~[~
+- ~t r ADDR~ Creates a read trap on the given address. All reads to the given
+  address are logged along with the value that was read.
+- ~t w ADDR~ Creates a write trap on the given address. All writes to the given
+  address are logged along with the value being written.
+- ~l~ Lists all active traps.
+- ~d ADDR~ Deletes any traps at the address, both read and write.
+- ~g~ Displays the values of all registers. You can do this with individual ~r~
+  commands too, this is more convenient for reading them all at once.
+
 * Example Programs
 ** Hello World (Code)
 #+begin_example
