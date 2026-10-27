@@ -22,6 +22,7 @@ type DirectMemorySpace struct {
 }
 
 const InputStreamBase uint32 = 0x10000
+const InputStreamMaxLength uint32 = 0xffffffff - InputStreamBase + 1
 
 const (
 	VMFAddress uint32 = 0
@@ -37,23 +38,26 @@ const (
 
 func BuildMemorySpace(program io.Reader, mmio MemoryMappedIO) (MemorySpace, error) {
 	pages := make([][]byte, 0, 8)
-	programSize := 0
+	var programSize uint32
 	eof := false
-	for !eof {
+	for !eof && programSize <= InputStreamMaxLength {
 		page := make([]byte, 4096)
 		n, err := program.Read(page)
 		eof = errors.Is(err, io.EOF)
 		if err != nil && !eof {
 			return nil, err
 		}
-		programSize += n
+		programSize += uint32(n)
 		pages = append(pages, page[:n])
 	}
 
-	inputStream := make([]uint32, programSize)
+	inputStream := make([]uint32, min(programSize, InputStreamMaxLength))
 	offset := 0
 	for _, page := range pages {
 		for i := range page {
+			if offset >= int(InputStreamMaxLength) {
+				break
+			}
 			inputStream[offset] = uint32(page[i])
 			offset++
 		}
