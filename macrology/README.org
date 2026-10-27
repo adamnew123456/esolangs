@@ -1,0 +1,179 @@
+* What is this?
+*Macrology* is a assembly-like macro language. It combines the low-level
+instructions and memory model of an assembly language, while mostly being
+"useful" for generating and transforming text.
+
+* The Macrology Runtime
+** Execution and Verbatim Mode
+Think of the Macrology runtime like you would a 8-bit machine. Macrology's
+machine is 32-bit but the same concepts apply. It has a memory layout and an
+instruction set. It reads instructions from memory and executes them, but not in
+the way a normal machine would.
+
+Macrology programs are text even at the "machine code" level. When you give the
+Macrology runtime a program:
+
+#+begin_example
+  $ macrology program.txt
+#+end_example
+
+It starts off executing the program in *verbatim mode*. In verbatim mode,
+Macrology sets the instruction pointer to the first character in the file and
+"executes" it by copying it to stdout. It does this until it either "executes" a
+zero byte (ending the program) or it reads the *verbatim mode terminator (VMT)*.
+Normally the VMT is set to curly left brace (0x7b) though it can be changed.
+
+This means that a Macrology Hello World is either a file that contains that text:
+
+#+begin_example
+  Hello, World!
+#+end_example
+
+Or a file containing a mix of text and code. I'll explain the instruction set
+later, so just assume that ~...~ outputs "World!":
+
+#+begin_example
+  Hello, {...
+#+end_example
+
+** Memory Layout
+The Macrology machine contains 16 GiB of memory organized into 2^32 words of
+32-bits each. Memory is addressed and accessed in terms of these words.
+
+Memory is divided into several segments each with its own purpose. I'll explain
+them in more detail in the following sections.
+
+| Start Word |   End Word | Purpose                               |
+|------------+------------+---------------------------------------|
+|       0x00 |       0x1f | System Registers and Memory-Mapped IO |
+|       0x20 |     0xffff | User Memory                           |
+|    0x10000 | 0xffffffff | Input Stream                          |
+
+*** System Registers
+The first memory segment is reserved for system registers. Macrology doesn't
+have /real/ registers that are separate from memory. They're just names for
+memory addresses that the instruction sets use for certain purposes. You can
+change them using load, move, or any other instructions that affect memory.
+
+| Word | Name                           | Type      |
+|------+--------------------------------+-----------|
+|    0 | VMF (Verbatim Mode Flag)       | Value     |
+|    1 | VMT (Verbatim Mode Terminator) | Value     |
+|    2 | HLT (Halt)                     | Value     |
+|    3 | SCV (Scratch Value)            | Value     |
+|    4 | SCA (Scratch Address)          | Value     |
+|    5 | TST (Test)                     | Value     |
+|    6 | EIP (End of Input Pointer)     | Read-Only |
+|    7 | IP (Instruction Pointer)       | Value     |
+|    8 | IOP (Input/Output Port)        | IO        |
+
+- *VMF* This value is 1 when Macrology is in verbatim mode and 0 when it isn't.
+  In effect it's always 0 since only code can read memory. Writing a non-zero
+  value here will force Macrology into verbatim mode for the next instruction.
+
+- *VMT* See the [[Execution and Verbatim Mode]] section. Macrology only sets this
+  value to 0x7b on startup. If you change it, the verbatim terminator will be
+  different until you change it again.
+
+- *HLT* This value is 0 when Macrology is executing. If you write a non-zero
+  value, it will stop executing after the current instruction.
+
+- *SCV, SCA, TST* Several instructions use these registers to store input and
+  output values. You'll have to check each individual instruction to see exactly
+  how. Though generally SVC is used for arithmetic and loading/storing values
+  into memory, SCA is used for calculating addresses for loading/storing values,
+  and TST is used for comparisons.
+
+- *EIP* The first address after the end of the input stream. Macrology doesn't
+  set this value after startup (and you can't write to it either), but it may be
+  useful for inspecting the input if it contains zero bytes. Writing to EIP is
+  a noop.
+
+- *IP* The address of the next instruction to execute. Macrology updates this
+  after executing every instruction (including in verbatim mode), though you can
+  also write to it to perform jumps.
+
+- *IOP* Used for memory-mapped IO.
+  - Reading from this location returns a byte read from stdin using the same
+    encoding rules as the input file (see [[Input Stream]]). Returns 0xffffffff if
+    stdin is end-of-file.
+  - Writing a byte to this location writes it to stdout. This only uses the
+    least-significant byte in the written word.
+
+*** User Memory
+User memory is used for general storage. None of the addresses in this range
+have special behavior, you can read and write to them without any other effects.
+
+*** Input Stream
+When you execute a file using the Macrology runtime, the contents of that file
+are copied into the input stream memory segment.  Macrology reads the input file
+as Latin1 and stores each character sequentially as a separate word. This means
+that each word in the input stream contains a value from 0-255. Any unused words
+at the end of the input stream are set to zero.
+
+Even though the input stream segment contains 0xfffeffff words, that doesn't
+mean that your programs have 16 GiB of writable memory. The input stream segment
+is read-only. Writing to it won't cause an error but it won't change the value
+stored at the address either.
+
+** Instruction Set
+When Macrology is not in verbatim mode, it executes the following instruction
+set. Any instructions not defined here is treated as a noop and advances the
+instruction pointer by one word.
+
+- Shortcuts
+  - All these instructions can be accomplished using normal move instructions,
+    but these special forms look better.
+  - ~}~ Sets VMF to 1. Note that while the VMT can be changed this instruction
+    cannot be, so programs will look unbalanced if you change the VMT and use
+    this instruction.
+  - ~!~ Copies the next address of the instruction pointer (after this
+    instruction is executed) into SCV.
+  - ~X~ Sets HALT to 1. 
+- Immediate load instructions
+  - ~#~ Load a value into SCV. These two bytes after this symbol are decoded
+    from hexadecimal. The case of A-F does not matter.
+  - ~@~ Load a value into SCA. The value is read the same way as ~#~.
+  - Both these instructions normally treat non-hexadecimal bytes as 0. However,
+    a few character combinations are used to load special values.
+    - ~##~ Address of SCV
+    - ~@@~ Address of SCA
+    - ~??~ Address of TEST
+    - ~><~ Address of IP (read this as /here/)
+    - ~<>~ Address of IOP (read this as /in-out/)
+- Move instructions
+  - ~l~ Treat SCA as a pointer and dereference it into SCV.
+  - ~s~ Treat SCA as a pointer and store the value of SCV into it.
+  - ~m~ Treats SCV and SCA as pointers. Copies the value that SCV points to into the location that SCA points to.
+  - ~?~ Conditional move. Like ~m~ but only performs the operation if the TST register is non-zero.
+- Arithmetic
+  - ~+~, ~-~, ~*~ Performs the arithmetic operation with SCV as the left-hand side and SCV as the right-hand side, and writes the result to SCV.
+  - ~/~ Performs the division and writes the quotient into SCV. Division by zero writes 0.
+  - ~%~ Performs the division and writes the remainder into SCV. Division by zero writes 0.
+- Logical
+  - ~&~, ~|~, ~x~ Performs the logical bitwise operation on SCV and SCA and writes the result to SCV. ~x~ here means XOR since the ~^~ character is reserved for comparisons.
+  - ~~~ Performs bitwise not on SCV and writes the result back into SCV.
+  - ~<~, ~>~ Performs a logical left-shift and right-shift of the value in SCV by the value in SCA.
+- Comparisons
+  - ~=~, ~v~, ~^~ Performs the comparison (equal, below, above) with SCV as the left-hand side and SVA as the right-hand side, and writes the result (1 or 0) into TST.
+
+* Example Programs
+** cat
+#+begin_example
+  {!@08+@20s@<>l@21s~@00=!@05+?X#21@<>m#20@><m
+#+end_example
+
+1. ~{~ Exits verbatim mode and starts executing at ~!~
+2. ~!@08+@20s~ Calculate the address after the ~s~ instruction and store it into 0x20.
+   1. ~!@08+~ calculates the address of the ~@~ plus 8 bytes. This is the length
+      of the following ~@08+@20s~ section.
+   2. ~@20s~ stores the calculated address into memory at 0x20.
+3. ~@<>l@21s~ Read a character from IOP and save it to 0x21.
+4. ~~@00=~ Check if the value is not EOF.
+   1. ~~~ EOF is 0xffffffff, its bitwise negation is zero.
+   2. ~@00=~ checks if if the negated value is zero.
+5. ~!@05+?X~ Halt if the check in step 4 fails.
+   1. ~!@05+~ calculate the address after the following ~X~.
+   2. ~?X~ jumps to that address, skipping the ~X~, if the step 4 check succeeds.
+6. ~#21@<>m~ Moves the value copied in step 3, at 0x21, into IOP.
+7. ~#20@><m~ Moves the address saved in step 2, at 0x20, into IP. 
