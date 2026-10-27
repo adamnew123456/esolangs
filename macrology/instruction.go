@@ -77,15 +77,24 @@ func ExecuteOne(mem *MemorySpace) {
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
 			mem.WriteWord(sca, scv)
+			if sca == IPAddress {
+				ip = 0
+			}
 		case 'm':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
 			mem.WriteWord(sca, mem.ReadWord(scv))
+			if sca == IPAddress {
+				ip = 0
+			}
 		case '?':
 			if mem.ReadWord(TSTAddress) != 0 {
 				scv = mem.ReadWord(SCVAddress)
 				sca = mem.ReadWord(SCAAddress)
 				mem.WriteWord(sca, mem.ReadWord(scv))
+				if sca == IPAddress {
+					ip = 0
+				}
 			}
 		case '+':
 			scv = mem.ReadWord(SCVAddress)
@@ -165,5 +174,7 @@ func ExecuteOne(mem *MemorySpace) {
 		}
 	}
 
-	mem.WriteWord(IPAddress, ip)
+	if ip > 0 {
+		mem.WriteWord(IPAddress, ip)
+	}
 }

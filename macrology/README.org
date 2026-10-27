@@ -91,7 +91,8 @@ change them using load, move, or any other instructions that affect memory.
 
 - *IP* The address of the next instruction to execute. Macrology updates this
   after executing every instruction (including in verbatim mode), though you can
-  also write to it to perform jumps.
+  also write to it to perform jumps. If an instruction writes to IP Macrology
+  does not increment it as usual.
 
 - *IOP* Used for memory-mapped IO.
   - Reading from this location returns a byte read from stdin using the same
