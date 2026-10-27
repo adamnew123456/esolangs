@@ -1,10 +1,6 @@
 package main
 
-func IsHalted(mem *MemorySpace) bool {
-	return mem.ReadWord(HLTAddress) != 0
-}
-
-func buildLoadConstant(mem *MemorySpace, start uint32) uint32 {
+func buildLoadConstant(mem MemorySpace, start uint32) uint32 {
 	hex1 := mem.ReadWord(start)
 	hex2 := mem.ReadWord(start + 1)
 	if hex1 == '#' && hex2 == '#' {
@@ -42,7 +38,11 @@ func buildLoadConstant(mem *MemorySpace, start uint32) uint32 {
 	}
 }
 
-func ExecuteOne(mem *MemorySpace) {
+func IsHalted(mem MemorySpace) bool {
+	return mem.ReadWord(HLTAddress) != 0
+}
+
+func ExecuteOne(mem MemorySpace) {
 	ip := mem.ReadWord(IPAddress)
 	instr := mem.ReadWord(ip)
 	ip++
@@ -53,7 +53,7 @@ func ExecuteOne(mem *MemorySpace) {
 		} else if instr == mem.ReadWord(VMTAddress) {
 			mem.WriteWord(VMFAddress, 0)
 		} else {
-			mem.WriteIOPort(instr)
+			mem.WriteWord(IOPAddress, instr)
 		}
 	} else {
 		var sca, scv uint32

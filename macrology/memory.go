@@ -5,12 +5,17 @@ import (
 	"io"
 )
 
+type MemorySpace interface {
+	ReadWord(addr uint32) uint32
+	WriteWord(addr, value uint32)
+}
+
 type MemoryMappedIO struct {
 	ReadIOPort func() uint32
 	WriteIOPort func(value uint32)
 }
 
-type MemorySpace struct {
+type DirectMemorySpace struct {
 	userSystem []uint32
 	inputStream []uint32
 	MemoryMappedIO
@@ -30,14 +35,15 @@ const (
 	IOPAddress uint32 = 8
 )
 
-func BuildMemorySpace(program io.Reader, mmio MemoryMappedIO) (*MemorySpace, error) {
+func BuildMemorySpace(program io.Reader, mmio MemoryMappedIO) (MemorySpace, error) {
 	pages := make([][]byte, 0, 8)
 	programSize := 0
-	var err error
-	for !errors.Is(err, io.EOF) {
+	eof := false
+	for !eof {
 		page := make([]byte, 4096)
 		n, err := program.Read(page)
-		if err != nil {
+		eof = errors.Is(err, io.EOF)
+		if err != nil && !eof {
 			return nil, err
 		}
 		programSize += n
@@ -59,14 +65,14 @@ func BuildMemorySpace(program io.Reader, mmio MemoryMappedIO) (*MemorySpace, err
 	userSystem[EIPAddress] = InputStreamBase + uint32(programSize)
 	userSystem[IPAddress] = InputStreamBase
 
-	return &MemorySpace{
+	return &DirectMemorySpace{
 		userSystem: userSystem,
 		inputStream: inputStream,
 		MemoryMappedIO: mmio,
 	}, nil
 }
 
-func (mem *MemorySpace) ReadWord(addr uint32) uint32 {
+func (mem *DirectMemorySpace) ReadWord(addr uint32) uint32 {
 	if addr == IOPAddress {
 		return mem.ReadIOPort()
 	}
@@ -81,7 +87,7 @@ func (mem *MemorySpace) ReadWord(addr uint32) uint32 {
 	return 0
 }
 
-func (mem *MemorySpace) WriteWord(addr, value uint32) {
+func (mem *DirectMemorySpace) WriteWord(addr, value uint32) {
 	if addr == EIPAddress {
 		return
 	}
