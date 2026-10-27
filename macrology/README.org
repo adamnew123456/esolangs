@@ -169,3 +169,21 @@ instruction pointer by one word.
 #+begin_example
   {@<>#48s#65s#6cs#6cs#6fs#2cs#20s#57s#6fs#72s#6cs#64s#21s}
 #+end_example
+** cat
+#+begin_example
+  {!@08+@20s@<>l@21s~@00^!@10+@22s#22@><?X#21@<>m#20@><m
+#+end_example
+
+1. ~{~ Start executing code
+2. ~!@08+@20s~ Stores the address of the instruction after the ~s~ into memory
+   at 0x20.
+3. ~@<>l@21s~ Loads a character from stdin into SCV and copies it into memory at
+   0x21.
+4. ~~@00^~ Bitwise-negate the character and check if it's greater than zero
+   (true for all characters except EOF, 0xffffffff)
+5. ~!@10+@22s#22@><?X~ Stores the address of the instruction after ~X~ into
+   memory at 0x22. Then conditionally moves that value into IP (performing a
+   jump) if the condition succeeded. That is, this skips the exit instruction
+   if the character was not EOF.
+6. ~#21@<>m~ Writes the character at 0x21 to stdout. 
+7. ~#20@><m~ Copies the address at 0x20 to the instruction pointer.
