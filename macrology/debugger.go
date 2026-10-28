@@ -10,7 +10,7 @@ import (
 
 type Debugger interface {
 	StepInstruction() bool
-	TraceInstruction(instr uint32)
+	TraceInstruction(addr, instr uint32)
 	InstrumentMemory(mem MemorySpace) MemorySpace
 }
 
@@ -142,14 +142,14 @@ func (dbg *SocketDebugger) StepInstruction() bool {
 				}
 			}
 		case "g":
-			fmt.Fprintf(dbg.client, "[%08x] VMF = %08x\n", VMFAddress, dbg.memory.ReadWord(VMFAddress))
-			fmt.Fprintf(dbg.client, "[%08x] VMT = %08x\n", VMTAddress, dbg.memory.ReadWord(VMTAddress))
-			fmt.Fprintf(dbg.client, "[%08x] HLT = %08x\n", HLTAddress, dbg.memory.ReadWord(HLTAddress))
-			fmt.Fprintf(dbg.client, "[%08x] SCV = %08x\n", SCVAddress, dbg.memory.ReadWord(SCVAddress))
-			fmt.Fprintf(dbg.client, "[%08x] SCA = %08x\n", SCAAddress, dbg.memory.ReadWord(SCAAddress))
-			fmt.Fprintf(dbg.client, "[%08x] TST = %08x\n", TSTAddress, dbg.memory.ReadWord(TSTAddress))
-			fmt.Fprintf(dbg.client, "[%08x] EIP = %08x\n", EIPAddress, dbg.memory.ReadWord(EIPAddress))
-			fmt.Fprintf(dbg.client, "[%08x] IP = %08x\n", IPAddress, dbg.memory.ReadWord(IPAddress))
+			fmt.Fprintf(dbg.client, "[%02x] VMF = %08x\n", VMFAddress, dbg.memory.ReadWord(VMFAddress))
+			fmt.Fprintf(dbg.client, "[%02x] VMT = %08x\n", VMTAddress, dbg.memory.ReadWord(VMTAddress))
+			fmt.Fprintf(dbg.client, "[%02x] HLT = %08x\n", HLTAddress, dbg.memory.ReadWord(HLTAddress))
+			fmt.Fprintf(dbg.client, "[%02x] SCV = %08x\n", SCVAddress, dbg.memory.ReadWord(SCVAddress))
+			fmt.Fprintf(dbg.client, "[%02x] SCA = %08x\n", SCAAddress, dbg.memory.ReadWord(SCAAddress))
+			fmt.Fprintf(dbg.client, "[%02x] TST = %08x\n", TSTAddress, dbg.memory.ReadWord(TSTAddress))
+			fmt.Fprintf(dbg.client, "[%02x] EIP = %08x\n", EIPAddress, dbg.memory.ReadWord(EIPAddress))
+			fmt.Fprintf(dbg.client, "[%02x] IP = %08x\n", IPAddress, dbg.memory.ReadWord(IPAddress))
 		default:
 			fmt.Fprintf(dbg.client, `Bad commandline: '%s'
 Commands:
@@ -169,15 +169,15 @@ Commands:
 	return true
 }
 
-func (dbg *SocketDebugger) TraceInstruction(instr uint32) {
+func (dbg *SocketDebugger) TraceInstruction(addr, instr uint32) {
 	if dbg.client == nil {
 		return
 	}
 
 	if instr >= ' ' && instr <= '~' {
-		fmt.Fprintf(dbg.client, "exec %08x %c\n", instr, instr)
+		fmt.Fprintf(dbg.client, "exec [%08x] %08x %c\n", addr, instr, instr)
 	} else {
-		fmt.Fprintf(dbg.client, "exec %08x\n", instr)
+		fmt.Fprintf(dbg.client, "exec [%08x] %08x\n", addr, instr)
 	}
 }
 

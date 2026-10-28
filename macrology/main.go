@@ -80,8 +80,9 @@ func main() {
 			if !dbg.StepInstruction() {
 				break
 			}
-			instr := memory.ReadWord(memory.ReadWord(IPAddress))
-			dbg.TraceInstruction(instr)
+			ip := memory.ReadWord(IPAddress)
+			instr := memory.ReadWord(ip)
+			dbg.TraceInstruction(ip, instr)
 		}
 		ExecuteOne(memory)
 	}
