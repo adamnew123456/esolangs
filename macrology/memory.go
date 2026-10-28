@@ -63,7 +63,7 @@ func BuildMemorySpace(program io.Reader, mmio MemoryMappedIO) (MemorySpace, erro
 		}
 	}
 
-	userSystem := make([]uint32, 0xffff)
+	userSystem := make([]uint32, 0x10000)
 	userSystem[VMFAddress] = 1
 	userSystem[VMTAddress] = '{'
 	userSystem[EIPAddress] = InputStreamBase + uint32(programSize)
