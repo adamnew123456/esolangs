@@ -225,3 +225,35 @@ debug socket:
    if the character was not EOF.
 6. ~#21@<>m~ Writes the character at 0x21 to stdout. 
 7. ~#20@><m~ Copies the address at 0x20 to the instruction pointer.
+** 99 Bottles of Beer
+#+begin_example
+  {#63@30s
+   !@13+@21s !@4c+@><s @30l@0av !@21+@ffs#ff@><? @30l@0a/@30+@<>s @30l@0a%@30+@<>s #20@><m
+   !@08+@22s
+   !@0f+@20s#21@><m} bottles of beer on the wall,
+  {!@0f+@20s#21@><m} bottles of beer!
+  Take 1 down, pass it around,
+  {@30l@01-@30s!@0f+@20s#21@><m} bottles of beer on the wall!
+
+  {@30l@00^#22@><?X
+#+end_example
+
+This has a few tricks that /cat/ does not:
+
+- ~!@13+@21s !@4c+@><s @30l@0av !@21+@ffs#ff@><? @30l@0a/@30+@<>s @30l@0a%@30+@<>s #20@><m~ is a subroutine.
+  You can think of it in 4 parts:
+  1. ~!@13+@21s~ calculates the start address of the function and stores it into
+     0x21. The start address is the first instruction after part 2.
+  2. ~!@4c+@><s~ skips the body of the function the first time it's executed.
+  3. ~@30l@0av !@21+@ffs#ff@><? @30l@0a/@30+@<>s @30l@0a%@30+@<>s~ is the
+     function body. It prints out the decimal form of the value stored at 0x30,
+     either two digits if it's above 10 or 1 digit if it isn't.
+  4. ~#20@><m~ returns from the function, assuming the return value was stored
+     into 0x20.
+- ~!@0f+@20s#21@><m~ is a subroutine invocation. The address after the
+  invocation is stored in 0x20, while the subroutine start address is stored in
+  0x21.
+- ~!@21+@ffs#ff@><?~ performs a jump to an address calculated on the fly. ~?~ is
+  a conditional /move/ not a conditional /load/, I thought about adding
+  conditional load but didn't since this trick does the same thing as long as
+  you have a spare memory address sitting around.
