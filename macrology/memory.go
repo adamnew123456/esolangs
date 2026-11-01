@@ -11,12 +11,12 @@ type MemorySpace interface {
 }
 
 type MemoryMappedIO struct {
-	ReadIOPort func() uint32
+	ReadIOPort  func() uint32
 	WriteIOPort func(value uint32)
 }
 
 type DirectMemorySpace struct {
-	userSystem []uint32
+	userSystem  []uint32
 	inputStream []uint32
 	MemoryMappedIO
 }
@@ -32,7 +32,7 @@ const (
 	SCAAddress uint32 = 4
 	TSTAddress uint32 = 5
 	EIPAddress uint32 = 6
-	IPAddress uint32 = 7
+	IPAddress  uint32 = 7
 	IOPAddress uint32 = 8
 )
 
@@ -70,8 +70,8 @@ func BuildMemorySpace(program io.Reader, mmio MemoryMappedIO) (MemorySpace, erro
 	userSystem[IPAddress] = InputStreamBase
 
 	return &DirectMemorySpace{
-		userSystem: userSystem,
-		inputStream: inputStream,
+		userSystem:     userSystem,
+		inputStream:    inputStream,
 		MemoryMappedIO: mmio,
 	}, nil
 }

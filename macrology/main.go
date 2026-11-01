@@ -61,7 +61,7 @@ func main() {
 	}
 
 	mmio := MemoryMappedIO{
-		ReadIOPort: stdinReader,
+		ReadIOPort:  stdinReader,
 		WriteIOPort: stdoutWriter,
 	}
 	memory, err := BuildMemorySpace(program, mmio)

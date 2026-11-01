@@ -15,19 +15,19 @@ type Debugger interface {
 }
 
 type SocketDebugger struct {
-	client net.Conn
-	memory MemorySpace
-	continued bool 
-	readTraps map[uint32]bool
+	client     net.Conn
+	memory     MemorySpace
+	continued  bool
+	readTraps  map[uint32]bool
 	writeTraps map[uint32]bool
 }
 
 func ConnectDebugger(conn net.Conn) *SocketDebugger {
 	fmt.Fprintln(conn, "-*- Macrology Debugger -*-")
 	return &SocketDebugger{
-		client: conn,
-		continued: false,
-		readTraps: make(map[uint32]bool),
+		client:     conn,
+		continued:  false,
+		readTraps:  make(map[uint32]bool),
 		writeTraps: make(map[uint32]bool),
 	}
 }

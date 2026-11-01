@@ -4,13 +4,13 @@ func buildLoadConstant(mem MemorySpace, start uint32) uint32 {
 	hex1 := mem.ReadWord(start)
 	hex2 := mem.ReadWord(start + 1)
 	if hex1 == '#' && hex2 == '#' {
-		 return SCVAddress
+		return SCVAddress
 	} else if hex1 == '@' && hex2 == '@' {
-		 return SCAAddress
+		return SCAAddress
 	} else if hex1 == '?' && hex2 == '?' {
-		 return TSTAddress
+		return TSTAddress
 	} else if hex1 == '>' && hex2 == '<' {
-		 return IPAddress
+		return IPAddress
 	} else if hex1 == '<' && hex2 == '>' {
 		return IOPAddress
 	}
@@ -76,8 +76,7 @@ func ExecuteOne(mem MemorySpace) {
 			mem.WriteWord(SCVAddress, mem.ReadWord(sca))
 		case 'L':
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, mem.ReadWord(sca))
-			mem.WriteWord(SCVAddress, mem.ReadWord(sca + 1))
+			mem.WriteWord(SCAAddress, mem.ReadWord(sca))
 		case 's':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
@@ -98,22 +97,22 @@ func ExecuteOne(mem MemorySpace) {
 		case '+':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv + sca)
+			mem.WriteWord(SCVAddress, scv+sca)
 		case '-':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv - sca)
+			mem.WriteWord(SCVAddress, scv-sca)
 		case '*':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv * sca)
+			mem.WriteWord(SCVAddress, scv*sca)
 		case '/':
 			sca = mem.ReadWord(SCAAddress)
 			if sca == 0 {
 				mem.WriteWord(SCVAddress, 0)
 			} else {
 				scv = mem.ReadWord(SCVAddress)
-				mem.WriteWord(SCVAddress, scv / sca)
+				mem.WriteWord(SCVAddress, scv/sca)
 			}
 		case '%':
 			sca = mem.ReadWord(SCAAddress)
@@ -121,31 +120,31 @@ func ExecuteOne(mem MemorySpace) {
 				mem.WriteWord(SCVAddress, 0)
 			} else {
 				scv = mem.ReadWord(SCVAddress)
-				mem.WriteWord(SCVAddress, scv % sca)
+				mem.WriteWord(SCVAddress, scv%sca)
 			}
 		case '&':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv & sca)
+			mem.WriteWord(SCVAddress, scv&sca)
 		case '|':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv | sca)
+			mem.WriteWord(SCVAddress, scv|sca)
 		case 'x':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv ^ sca)
+			mem.WriteWord(SCVAddress, scv^sca)
 		case '~':
 			scv = mem.ReadWord(SCVAddress)
 			mem.WriteWord(SCVAddress, ^scv)
 		case '>':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv >> sca)
+			mem.WriteWord(SCVAddress, scv>>sca)
 		case '<':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
-			mem.WriteWord(SCVAddress, scv << sca)
+			mem.WriteWord(SCVAddress, scv<<sca)
 		case '=':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)
