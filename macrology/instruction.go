@@ -74,6 +74,10 @@ func ExecuteOne(mem MemorySpace) {
 		case 'l':
 			sca = mem.ReadWord(SCAAddress)
 			mem.WriteWord(SCVAddress, mem.ReadWord(sca))
+		case 'L':
+			sca = mem.ReadWord(SCAAddress)
+			mem.WriteWord(SCVAddress, mem.ReadWord(sca))
+			mem.WriteWord(SCVAddress, mem.ReadWord(sca + 1))
 		case 's':
 			scv = mem.ReadWord(SCVAddress)
 			sca = mem.ReadWord(SCAAddress)

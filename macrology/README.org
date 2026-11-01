@@ -150,6 +150,7 @@ instruction pointer by one word.
     unknown instruction and executes ~+~.
 - Move instructions
   - ~l~ Treat SCA as a pointer and dereference it into SCV.
+  - ~L~ Treat SCA as a pointer and dereference it into SCA.
   - ~s~ Treat SCA as a pointer and store the value of SCV into it.
   - ~m~ Treats SCV and SCA as pointers. Copies the value that SCV points to into the location that SCA points to.
   - ~?~ Conditional move. Like ~m~ but only performs the operation if the TST register is non-zero.
