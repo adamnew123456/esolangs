@@ -14,12 +14,16 @@ type Debugger interface {
 	InstrumentMemory(mem MemorySpace) MemorySpace
 }
 
+type Traps struct {
+	addrs map[uint32]bool
+	wildcard bool
+}
+
 type SocketDebugger struct {
 	client     net.Conn
 	memory     MemorySpace
 	continued  bool
-	readTraps  map[uint32]bool
-	writeTraps map[uint32]bool
+	readTraps, writeTraps Traps
 }
 
 func ConnectDebugger(conn net.Conn) *SocketDebugger {
@@ -27,8 +31,8 @@ func ConnectDebugger(conn net.Conn) *SocketDebugger {
 	return &SocketDebugger{
 		client:     conn,
 		continued:  false,
-		readTraps:  make(map[uint32]bool),
-		writeTraps: make(map[uint32]bool),
+		readTraps:  Traps{addrs: make(map[uint32]bool)},
+		writeTraps: Traps{addrs: make(map[uint32]bool)},
 	}
 }
 
@@ -100,45 +104,60 @@ func (dbg *SocketDebugger) StepInstruction() bool {
 			}
 		case "t":
 			if len(args) != 3 {
-				fmt.Fprintln(dbg.client, "Usage: t (r|w) HEX-ADDR")
+				fmt.Fprintln(dbg.client, "Usage: t (r|w) (HEX-ADDR|*)")
 			} else {
-				var target map[uint32]bool
-				if args[2] == "r" {
-					target = dbg.readTraps
-				} else if args[2] == "w" {
-					target = dbg.writeTraps
+				var target *Traps
+				if args[1] == "r" {
+					target = &dbg.readTraps
+				} else if args[1] == "w" {
+					target = &dbg.writeTraps
 				} else {
 					fmt.Fprintf(dbg.client, "%s not a valid trap mode", args[2])
 				}
 				if target != nil {
-					addr, err := strconv.ParseUint(args[2], 16, 32)
-					if err != nil {
-						fmt.Fprintf(dbg.client, "Address error: %s\n", err.Error())
+					if args[2] == "*" {
+						target.wildcard = true
 					} else {
-						target[uint32(addr)] = true
+						addr, err := strconv.ParseUint(args[2], 16, 32)
+						if err != nil {
+							fmt.Fprintf(dbg.client, "Address error: %s\n", err.Error())
+						} else {
+							target.addrs[uint32(addr)] = true
+						}
 					}
 				}
 			}
 		case "l":
 			fmt.Fprintln(dbg.client, "Read traps")
-			for read := range dbg.readTraps {
-				fmt.Fprintf(dbg.client, "  %08x", read)
+			if dbg.readTraps.wildcard {
+				fmt.Fprintln(dbg.client, "  Wildcard trap enabled")
+			}
+			for read := range dbg.readTraps.addrs {
+				fmt.Fprintf(dbg.client, "  %08x\n", read)
 			}
 			fmt.Fprintln(dbg.client, "Write traps")
-			for write := range dbg.writeTraps {
-				fmt.Fprintf(dbg.client, "  %08x", write)
+			if dbg.writeTraps.wildcard {
+				fmt.Fprintln(dbg.client, "  Wildcard trap enabled")
+			}
+			for write := range dbg.writeTraps.addrs {
+				fmt.Fprintf(dbg.client, "  %08x\n", write)
 			}
 		case "d":
 			if len(args) != 2 {
 				fmt.Fprintln(dbg.client, "Usage: d HEX-ADDR")
 			} else {
-				addr, err := strconv.ParseUint(args[1], 16, 32)
-				if err != nil {
-					fmt.Fprintf(dbg.client, "Address error: %s\n", err.Error())
+				if args[1] == "*" {
+					dbg.readTraps.wildcard = false
+					dbg.writeTraps.wildcard = false
 				} else {
-					delete(dbg.readTraps, uint32(addr))
-					delete(dbg.writeTraps, uint32(addr))
-					fmt.Fprintln(dbg.client, "OK")
+					addr, err := strconv.ParseUint(args[1], 16, 32)
+					if err != nil {
+						fmt.Fprintf(dbg.client, "Address error: %s\n", err.Error())
+					} else {
+						delete(dbg.readTraps.addrs, uint32(addr))
+						delete(dbg.writeTraps.addrs, uint32(addr))
+						fmt.Fprintln(dbg.client, "OK")
+					}
 				}
 			}
 		case "g":
@@ -158,10 +177,10 @@ Commands:
   step: s
   read: r HEX-ADDR
   write: w HEX-ADDR HEX-VALUE
-  read trap: t r HEX-ADDR
-  write trap: t w HEX-ADDR
+  read trap: t r HEX-ADDR|*
+  write trap: t w HEX-ADDR|*
   list traps: l
-  delete trap: d HEX-ADDR
+  delete trap: d HEX-ADDR|*
   view registers: g
 `, cmdline)
 		}
@@ -188,14 +207,14 @@ func (dbg *SocketDebugger) InstrumentMemory(mem MemorySpace) MemorySpace {
 
 func (dbg *SocketDebugger) ReadWord(addr uint32) uint32 {
 	value := dbg.memory.ReadWord(addr)
-	if dbg.client != nil && dbg.readTraps[addr] {
+	if dbg.client != nil && (dbg.readTraps.wildcard || dbg.readTraps.addrs[addr]) {
 		fmt.Fprintf(dbg.client, "read addr=%08x value=%08x\n", addr, value)
 	}
 	return value
 }
 
 func (dbg *SocketDebugger) WriteWord(addr, value uint32) {
-	if dbg.client != nil && dbg.writeTraps[addr] {
+	if dbg.client != nil && (dbg.writeTraps.wildcard || dbg.writeTraps.addrs[addr]) {
 		fmt.Fprintf(dbg.client, "write addr=%08x value=%08x\n", addr, value)
 	}
 	dbg.memory.WriteWord(addr, value)

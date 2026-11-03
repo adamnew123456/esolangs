@@ -122,6 +122,8 @@ When Macrology is not in verbatim mode, it executes the following instruction
 set. Any instructions not defined here is treated as a noop and advances the
 instruction pointer by one word.
 
+All instructions treat memory values as unsigned.
+
 - Shortcuts
   - All these instructions can be accomplished using normal move instructions,
     but these special forms look better.
@@ -195,11 +197,14 @@ debug socket:
 - ~w ADDR VALUE~ Writes the word at ADDR to VALUE. Example: ~w 01 5b~ sets the
   VMT to the character ~[~
 - ~t r ADDR~ Creates a read trap on the given address. All reads to the given
-  address are logged along with the value that was read.
+  address are logged along with the value that was read. ~ADDR~ may be a hex
+  address or ~*~ which traps all addresses.
 - ~t w ADDR~ Creates a write trap on the given address. All writes to the given
-  address are logged along with the value being written.
+  address are logged along with the value being written. ~ADDR~ may be a hex
+  address or ~*~ which traps all addresses.
 - ~l~ Lists all active traps.
-- ~d ADDR~ Deletes any traps at the address, both read and write.
+- ~d ADDR~ Deletes any traps at the address, both read and write. Use ~*~ to
+  delete a wildcard trap.
 - ~g~ Displays the values of all registers. You can do this with individual ~r~
   commands too, this is more convenient for reading them all at once.
 
