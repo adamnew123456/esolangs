@@ -187,9 +187,12 @@ debug socket:
 
 - ~k~ Kills the process being debugged. This exits the interpreter directly
   instead of manipulating HLT like code would.
-- ~c~ Executes the program without stopping after each instruction. All executed
+- ~C~ Executes the program without stopping after each instruction. All executed
   instructions and triggered traps are logged, but the connection doesn't accept
   any more commands after this point.
+- ~c~ Executes the program until an instruction triggers a trap. If a trap is
+  triggered, stop executing and allow commands. If no traps are configured this
+  is equivalent to ~r~. 
 - ~s~ Single-step the next instruction. Accepts another command after the
   instruction finishes.
 - ~r ADDR~ Reads the word at ADDR (given as hex) and prints it out. Example:

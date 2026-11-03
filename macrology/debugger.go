@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+const (
+	SingleStep = iota
+	RunToTrap
+	RunToEnd
+)
+
 type Debugger interface {
 	StepInstruction() bool
 	TraceInstruction(addr, instr uint32)
@@ -22,7 +28,7 @@ type Traps struct {
 type SocketDebugger struct {
 	client     net.Conn
 	memory     MemorySpace
-	continued  bool
+	runMode    int
 	readTraps, writeTraps Traps
 }
 
@@ -30,20 +36,20 @@ func ConnectDebugger(conn net.Conn) *SocketDebugger {
 	fmt.Fprintln(conn, "-*- Macrology Debugger -*-")
 	return &SocketDebugger{
 		client:     conn,
-		continued:  false,
+		runMode:    SingleStep,
 		readTraps:  Traps{addrs: make(map[uint32]bool)},
 		writeTraps: Traps{addrs: make(map[uint32]bool)},
 	}
 }
 
 func (dbg *SocketDebugger) StepInstruction() bool {
-	if dbg.client == nil || dbg.continued {
+	if dbg.client == nil || dbg.runMode != SingleStep {
 		return true
 	}
 
 	rdr := bufio.NewReader(dbg.client)
-	var exit bool
-	for !exit {
+	var inputDone bool
+	for !inputDone {
 		cmdline, err := rdr.ReadString('\n')
 		if err != nil {
 			dbg.client.Close()
@@ -59,12 +65,16 @@ func (dbg *SocketDebugger) StepInstruction() bool {
 			fmt.Fprintln(dbg.client, "Exiting...")
 			return false
 		case "c":
-			dbg.continued = true
+			dbg.runMode = RunToTrap
+			fmt.Fprintln(dbg.client, "Continuing to exit or trap...")
+			inputDone = true
+		case "C":
+			dbg.runMode = RunToEnd
 			fmt.Fprintln(dbg.client, "Continuing to exit...")
-			exit = true
+			inputDone = true
 		case "s":
 			fmt.Fprintln(dbg.client, "Stepping")
-			exit = true
+			inputDone = true
 		case "r":
 			if len(args) != 2 {
 				fmt.Fprintln(dbg.client, "Usage: r HEX-ADDR")
@@ -173,7 +183,8 @@ func (dbg *SocketDebugger) StepInstruction() bool {
 			fmt.Fprintf(dbg.client, `Bad commandline: '%s'
 Commands:
   kill process: k
-  continue: c
+  continue to trap: c
+  continue to end: C
   step: s
   read: r HEX-ADDR
   write: w HEX-ADDR HEX-VALUE
@@ -208,6 +219,9 @@ func (dbg *SocketDebugger) InstrumentMemory(mem MemorySpace) MemorySpace {
 func (dbg *SocketDebugger) ReadWord(addr uint32) uint32 {
 	value := dbg.memory.ReadWord(addr)
 	if dbg.client != nil && (dbg.readTraps.wildcard || dbg.readTraps.addrs[addr]) {
+		if dbg.runMode == RunToTrap {
+			dbg.runMode = SingleStep
+		}
 		fmt.Fprintf(dbg.client, "read addr=%08x value=%08x\n", addr, value)
 	}
 	return value
@@ -215,6 +229,9 @@ func (dbg *SocketDebugger) ReadWord(addr uint32) uint32 {
 
 func (dbg *SocketDebugger) WriteWord(addr, value uint32) {
 	if dbg.client != nil && (dbg.writeTraps.wildcard || dbg.writeTraps.addrs[addr]) {
+		if dbg.runMode == RunToTrap {
+			dbg.runMode = SingleStep
+		}
 		fmt.Fprintf(dbg.client, "write addr=%08x value=%08x\n", addr, value)
 	}
 	dbg.memory.WriteWord(addr, value)
