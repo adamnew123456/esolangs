@@ -99,7 +99,7 @@ func (dbg *SocketDebugger) StepInstruction() bool {
 				if err != nil {
 					fmt.Fprintf(dbg.client, "Address error: %s\n", err.Error())
 				} else {
-					value, err := strconv.ParseUint(args[1], 16, 32)
+					value, err := strconv.ParseUint(args[2], 16, 32)
 					if err != nil {
 						fmt.Fprintf(dbg.client, "Address error: %s\n", err.Error())
 					} else {
